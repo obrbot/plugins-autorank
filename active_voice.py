@@ -42,6 +42,7 @@ def on_connected(event, conn):
     yield from asyncio.gather(*(check_voices(event, conn, channel) for channel in conn.channels.values()),
                               loop=event.loop)
 
+
 @asyncio.coroutine
 @hook.event(EventType.join)
 def on_join(event, conn):
@@ -51,6 +52,8 @@ def on_join(event, conn):
     """
     if event.nick == conn.bot_nick:
         yield from check_voices(event, conn, event.channel)
+
+
 @asyncio.coroutine
 @hook.event(EventType.message, EventType.action)
 def on_message(event, conn):
@@ -62,21 +65,27 @@ def on_message(event, conn):
     if 'v' not in user.mode:
         conn.send("MODE {} +v {}".format(event.channel.name, user.nick))
 
-def get_all_channels(event):
+
+def get_all_channels(bot):
     """
-    :type event: obrbot.event.Event
+    :type bot: obrbot.bot.ObrBot
     """
-    for conn in event.bot.connections:
+    for conn in bot.connections:
         for channel in conn.channels.values():
             yield conn, channel
 
+
 @asyncio.coroutine
 @hook.on_start()
-def hourly_check(event):
+def start_hourly_check(event):
+    asyncio.async(hourly_check(event.bot), loop=event.loop)
+
+@asyncio.coroutine
+def hourly_check(bot):
     """
-    :type event: obrbot.event.Event
+    :type bot: obrbot.bot.ObrBot
     """
     while True:
-        yield from asyncio.sleep(3600, loop=event.loop)
-        yield from asyncio.gather(*(check_voices(event, conn, channel) for conn, channel in get_all_channels(event)),
-                                  loop=event.loop)
+        yield from asyncio.sleep(3600, loop=bot.loop)
+        yield from asyncio.gather(*(check_voices(bot, conn, channel) for conn, channel in get_all_channels(bot)),
+                                  loop=bot.loop)
