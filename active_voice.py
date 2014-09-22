@@ -87,6 +87,8 @@ def on_message(event, conn):
     :type event: obrbot.event.Event
     :type conn: obrbot.clients.irc.IrcConnection
     """
+    if event.channel is None:
+        return
     user = event.channel.users[event.nick]
     if 'v' not in user.mode:
         set_voice(conn, event.channel, user, True)
