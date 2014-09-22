@@ -7,6 +7,9 @@ from obrbot.event import EventType
 
 logger = logging.getLogger('obrbot')
 
+channel_serve = "ChanServ"
+use_channel_serve = True
+
 
 @asyncio.coroutine
 def get_active(event, channel, minutes):
@@ -18,18 +21,41 @@ def get_active(event, channel, minutes):
     return active_users
 
 
+def set_voice(conn, channel, user, voice):
+    """
+    :type conn: obrbot.connection.Connection | obrbot.clients.irc.IrcConnection
+    :type channel: obrbot.connection.Channel
+    :type user: obrbot.connection.User
+    :type voice: bool
+    """
+    if voice and 'v' not in user.mode:
+        user.mode += 'v'
+    if not voice and 'v' in user.mode:
+        user.mode.replace('v', '')
+
+    if use_channel_serve:
+        command = "VOICE" if voice else "DEVOICE"
+        conn.message(channel_serve, "{} {} {}".format(command, channel.name, user.nick))
+    else:
+        mode = "+v" if voice else "-v"
+        conn.send("MODE {} {} {}".format(channel.name, mode, user.nick))
+
+
 @asyncio.coroutine
 def check_voices(event, conn, channel):
+    """
+    :type event: obrbot.event.Event
+    :type conn: obrbot.connection.Connection
+    :type channel: obrbot.connection.Channel
+    """
     active_users = yield from get_active(event, channel, 1440)
     for user in channel.users.values():
         if 'v' in user.mode:
             if user.nick.lower() not in active_users:
-                conn.send("MODE {} -v {}".format(channel.name, user.nick))
-            user.mode.replace('v', '')
+                set_voice(conn, channel, user, True)
         else:
             if user.nick.lower() in active_users:
-                conn.send("MODE {} +v {}".format(channel.name, user.nick))
-            user.mode += 'v'
+                set_voice(conn, channel, user, False)
 
 
 @asyncio.coroutine
@@ -63,7 +89,7 @@ def on_message(event, conn):
     """
     user = event.channel.users[event.nick]
     if 'v' not in user.mode:
-        conn.send("MODE {} +v {}".format(event.channel.name, user.nick))
+        set_voice(conn, event.channel, user, True)
 
 
 def get_all_channels(bot):
@@ -78,14 +104,18 @@ def get_all_channels(bot):
 @asyncio.coroutine
 @hook.on_start()
 def start_hourly_check(event):
-    asyncio.async(hourly_check(event.bot), loop=event.loop)
+    """
+    :type event: obrbot.event.Event
+    """
+    asyncio.async(hourly_check(event), loop=event.loop)
+
 
 @asyncio.coroutine
-def hourly_check(bot):
+def hourly_check(event):
     """
-    :type bot: obrbot.bot.ObrBot
+    :type event: obrbot.event.Event
     """
     while True:
-        yield from asyncio.sleep(3600, loop=bot.loop)
-        yield from asyncio.gather(*(check_voices(bot, conn, channel) for conn, channel in get_all_channels(bot)),
-                                  loop=bot.loop)
+        yield from asyncio.sleep(3600, loop=event.loop)
+        yield from asyncio.gather(*(check_voices(event, conn, channel)
+                                    for conn, channel in get_all_channels(event.bot)), loop=event.loop)
