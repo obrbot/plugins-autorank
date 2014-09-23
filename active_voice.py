@@ -29,9 +29,9 @@ def set_voice(conn, channel, user, voice):
     :type voice: bool
     """
     if voice and 'v' not in user.mode:
-        user.mode += 'v'
+        user.mode = user.mode + 'v'
     if not voice and 'v' in user.mode:
-        user.mode.replace('v', '')
+        user.mode = user.mode.replace('v', '')
 
     if use_channel_serve:
         command = "VOICE" if voice else "DEVOICE"
@@ -52,10 +52,10 @@ def check_voices(event, conn, channel):
     for user in channel.users.values():
         if 'v' in user.mode:
             if user.nick.lower() not in active_users:
-                set_voice(conn, channel, user, True)
+                set_voice(conn, channel, user, False)
         else:
             if user.nick.lower() in active_users:
-                set_voice(conn, channel, user, False)
+                set_voice(conn, channel, user, True)
 
 
 @asyncio.coroutine
