@@ -8,7 +8,7 @@ from obrbot.event import EventType
 logger = logging.getLogger('obrbot')
 
 channel_serve = "ChanServ"
-use_channel_serve = True
+use_channel_serve = False
 
 
 @asyncio.coroutine
@@ -76,9 +76,7 @@ def on_join(event, conn):
     :type event: obrbot.event.Event
     :type conn: obrbot.clients.irc.IrcConnection
     """
-    if event.nick == conn.bot_nick:
-        yield from check_voices(event, conn, event.channel)
-
+    yield from check_voices(event, conn, event.channel)
 
 @asyncio.coroutine
 @hook.event(EventType.message, EventType.action)
