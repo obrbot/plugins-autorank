@@ -29,7 +29,7 @@ def set_voice(conn, channel, user, voice):
     :type voice: bool
     """
     if voice and 'v' not in user.mode:
-        user.mode = user.mode + 'v'
+        user.mode += 'v'
     if not voice and 'v' in user.mode:
         user.mode = user.mode.replace('v', '')
 
